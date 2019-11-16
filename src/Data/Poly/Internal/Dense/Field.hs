@@ -55,21 +55,21 @@ quotientAndRemainder xs ys
   | lenYs == 1 = let invY = recip (G.unsafeHead ys) in
                  (G.map (`times` invY) xs, G.empty)
   | otherwise = runST $ do
-    qs <- MG.unsafeNew lenQs
-    rs <- MG.unsafeNew lenXs
-    G.unsafeCopy rs xs
-    let yLast = G.unsafeLast ys
+    qs <- MG.new lenQs
+    rs <- MG.new lenXs
+    G.copy rs xs
+    let yLast = G.last ys
         invYLast = recip yLast
     forM_ [lenQs - 1, lenQs - 2 .. 0] $ \i -> do
-      r <- MG.unsafeRead rs (lenYs - 1 + i)
+      r <- MG.read rs (lenYs - 1 + i)
       let q = if yLast == one then r else r `times` invYLast
-      MG.unsafeWrite qs i q
-      MG.unsafeWrite rs (lenYs - 1 + i) zero
+      MG.write qs i q
+      MG.write rs (lenYs - 1 + i) zero
       forM_ [0 .. lenYs - 2] $ \k -> do
-        let y = G.unsafeIndex ys k
+        let y = (G.!) ys k
         when (y /= zero) $
           MG.unsafeModify rs (\c -> c `minus` q `times` y) (i + k)
-    let rs' = MG.unsafeSlice 0 lenYs rs
+    let rs' = MG.slice 0 lenYs rs
     (,) <$> G.unsafeFreeze qs <*> G.unsafeFreeze rs'
   where
     lenXs = G.length xs
@@ -88,7 +88,7 @@ remainder xs ys
     rs <- G.thaw xs
     ys' <- G.unsafeThaw ys
     remainderM rs ys'
-    G.unsafeFreeze $ MG.unsafeSlice 0 (G.length xs `min` G.length ys) rs
+    G.unsafeFreeze $ MG.slice 0 (G.length xs `min` G.length ys) rs
 {-# INLINABLE remainder #-}
 
 remainderM
@@ -101,14 +101,14 @@ remainderM xs ys
   | lenYs == 0 = throw DivideByZero
   | lenYs == 1 = MG.set xs zero
   | otherwise = do
-    yLast <- MG.unsafeRead ys (lenYs - 1)
+    yLast <- MG.read ys (lenYs - 1)
     let invYLast = recip yLast
     forM_ [lenQs - 1, lenQs - 2 .. 0] $ \i -> do
-      r <- MG.unsafeRead xs (lenYs - 1 + i)
-      MG.unsafeWrite xs (lenYs - 1 + i) zero
+      r <- MG.read xs (lenYs - 1 + i)
+      MG.write xs (lenYs - 1 + i) zero
       let q = if yLast == one then r else r `times` invYLast
       forM_ [0 .. lenYs - 2] $ \k -> do
-        y <- MG.unsafeRead ys k
+        y <- MG.read ys k
         when (y /= zero) $
           MG.unsafeModify xs (\c -> c `minus` q `times` y) (i + k)
   where
